@@ -1,0 +1,192 @@
+1    # Filename:     segmentWeightFraction[i]_ver03.py
+2    # Author:       Carlos Linares
+3    # Date:         2019-05-18
+4    # Version log:  00 - initial functional version
+5    #               01 - fixing errors
+6    #               02 - forcing data types on equations
+7    #               03 - improving iterative method for convergence
+8    
+9    # Free to share, modify and distribute
+10   
+11   # loading libraries
+12   import numpy as np
+13   from math import exp, pow, atan, pi
+14   
+15   
+16   # Defining functions
+17   def breguetRange(TSFC, speed, liftToDragRatio, gamma, segmentRange):
+18       "This function calculates the fuel fraction for a mission segment given the f_range"
+19       weightFraction = exp(-TSFC * segmentRange / speed  * (pow(liftToDragRatio,-1) + gamma))   
+20       return weightFraction
+21   
+22   
+23   def breguetEndurance(TSFC, liftToDragRatio, endurance):
+24       "This function calculates the fuel fraction for a mission segment given the endurance"
+25       weightFraction = exp(-TSFC * endurance / liftToDragRatio)
+26       return weightFraction
+27   
+28   
+29   def emptyWeightEstimate(Wto, A, C, K):
+30       "This function calculates the empty weight fraction given statistical coefficients"
+31       emptyfraction = A * pow(Wto*2.2,C) * K
+32       return emptyfraction
+33   
+34   
+35   # Input global data
+36   # Empty weight coefficients (Jet Trainer)
+37   A = 1.59
+38   C = - 0.10
+39   K = 0.95
+40   
+41   loitering = float(input("Enter combat loitering [h]: "))        # Combat loitering time
+42   Wpayload = float(input("Enter mission payload [kg]: "))         # Payload in kg
+43   missionRange = float(input("Enter mission range [km]: ")) *1000 # Range in m
+44   
+45   Wto_guess = float(input("Enter Wto_guess [kg]: "))
+46   Wactual = np.empty(10)
+47   segmentWeightFraction = np.empty(9)
+48   
+49   # Initializing loop variables
+50   i = 0
+51   Wactual[i] = Wto_guess
+52   match = False
+53   
+54   while (match == False):
+55   
+56       # Phase 01-03:   Engine Start, Taxi and Take Off
+57       segmentWeightFraction[i] = 0.970
+58       Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+59       i = i + 1
+60   
+61       # Phase04:       Climb to Cruise Altitude and reach Cruise Speed
+62       # input data
+63       climbGradient = 3.5    # [%]
+64       initialAltitude = 0.0  # [m]
+65       finalAltitude = 10000  # [m]
+66       speed = 560 / 3.6  # [m/s]
+67       TSFC = 8.10e-6 * 9.81 # [s^-1]
+68       liftToDragRatio = 13  # [-]
+69   
+70       # calculations
+71       climbRange = abs(finalAltitude - initialAltitude) / (climbGradient / 100)
+72       gamma = atan(climbGradient) / 180 * pi
+73   
+74       segmentWeightFraction[i] = breguetRange(TSFC, speed, liftToDragRatio, gamma, climbRange)
+75       Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+76       i = i + 1
+77   
+78       # phase05:      Cruise out at 10000m
+79       # input data
+80       gamma = float(0.0)  # [rad]
+81       cruiseRange = (missionRange - climbRange)  # [m]
+82       speed = 370 / 3.6  # [m/s]
+83       TSFC = 8.10e-6 * 9.81 # [s^-1]
+84       liftToDragRatio = 13  # [-]
+85   
+86       # calculations
+87       segmentWeightFraction[i] = breguetRange(TSFC, speed, liftToDragRatio, gamma, cruiseRange)
+88       Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+89       i = i + 1
+90   
+91       # phase06:      Descent to 3500 m
+92       # No fuel usage
+93   
+94       # phase07:      Loitering at 3500 m
+95       # input data
+96       TSFC = 8.10e-6 * 9.81 # [s^-1]
+97       liftToDragRatio = 13  # [-]
+98       endurance = loitering * 3600  # [s]
+99   
+100      # calculations
+101      segmentWeightFraction[i] = breguetEndurance(TSFC, liftToDragRatio, endurance)
+102      Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+103      i = i + 1
+104  
+105      # phase08:      Dash in at 750 km/h during 10 minutes
+106      # input data
+107      gamma = 0.0  # [rad]
+108      f_range = 750 / 3.6 * 10 * 60  # [m]
+109      speed = 750 / 3.6  # [m/s]
+110      TSFC = 8.10e-6 * 9.81 # [s^-1]
+111      liftToDragRatio = 13  # [-]
+112  
+113      # calculations
+114      segmentWeightFraction[i] = breguetRange(TSFC, speed, liftToDragRatio, gamma, f_range)
+115      Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+116      i = i + 1
+117  
+118      # phase09:      Combat for 15 minutes at 500 m
+119      # input data
+120      TSFC = 8.10e-6 * 9.81 # [s^-1]
+121      liftToDragRatio = 13  # [-]
+122      endurance = 15 * 60  # [s]
+123  
+124      # calculations
+125      segmentWeightFraction[i] = breguetEndurance(TSFC, liftToDragRatio, endurance)
+126      Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i] - Wpayload  # ordinance use [kg]
+127      i = i + 1
+128  
+129      # phase10:       Climb to Cruise Altitude and reach Cruise Speed
+130      # input data
+131      climbGradient = 3.5  # [%]
+132      initialAltitude = 0  # [m]
+133      finalAltitude = 10000  # [m]
+134      speed = 370 / 3.6  # [m/s]
+135      TSFC = 8.10e-6 * 9.81 # [s^-1]
+136      liftToDragRatio = 16  # [-]
+137  
+138      # calculations
+139      climbRange = abs(finalAltitude - initialAltitude) / (climbGradient / 100)
+140      gamma = atan(climbGradient) / 180 * pi
+141  
+142      segmentWeightFraction[i] = breguetRange(TSFC, speed, liftToDragRatio, gamma, climbRange)
+143      Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+144      i = i + 1
+145  
+146      # phase11:      Cruise in at 10000m
+147      # input data
+148      gamma = 0.0  # [rad]
+149      f_range = (missionRange - climbRange)  # [m]
+150      speed = 560 / 3.6  # [m/s]
+151      TSFC = 8.10e-6 * 9.81 # [s^-1]
+152      liftToDragRatio = 16  # [-]
+153  
+154      # calculations
+155      segmentWeightFraction[i] = breguetRange(TSFC, speed, liftToDragRatio, gamma, f_range)
+156      Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+157      i = i + 1
+158  
+159      # phase12:      Descent
+160      # No fuel usage
+161  
+162      # phase13:      Landing, taxi and shutdown
+163      segmentWeightFraction[i] = 0.995
+164      Wactual[i + 1] = segmentWeightFraction[i] * Wactual[i]
+165      i = i + 1
+166  
+167      # final calculations
+168      W_fuel = Wactual[0] - Wactual[i]
+169      We_tent = Wactual[i]
+170  
+171      We_allowed = emptyWeightEstimate(Wactual[0], A, C, K) * Wactual[0]
+172  
+173      Wto = We_allowed + W_fuel + Wpayload
+174  
+175      if (abs(Wto - Wactual[0]) < 100):
+176          match = True
+177          print(Wactual)
+178          print(segmentWeightFraction)
+179  
+180      print("End of interation",Wto)
+181  
+182      # reset Wactual
+183      i = 0
+184      Wactual[i] = Wto
+185  
+186  
+187  
+188  # saving data
+189  # x = np.arange(0.0,5.0,1.0)
+190  # np.savetxt('test.out', x, delimiter=',')
+191  
+192  print("Take Off Weight: ", Wto, "\nFuel Weight: ", W_fuel, "\nEmpty Weight :", We_allowed)
