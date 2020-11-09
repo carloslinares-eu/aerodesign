@@ -130,3 +130,6 @@ dmypy.json
 
 # Visual Studio
 .vscode/
+
+# Excel Temporal File
+~$*.xlsx
