@@ -133,3 +133,6 @@ dmypy.json
 
 # Excel Temporal File
 ~$*.xlsx
+
+# Input
+input/

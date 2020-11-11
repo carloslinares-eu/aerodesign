@@ -1,7 +1,18 @@
-import os, math, openpyxl
+import pathlib, math, openpyxl
 
-def scan_mission_file():
-    return 0
+def scan_mission_file(path_to_mission_file):
+    mission_workbook = openpyxl.load_workbook(path_to_mission_file, read_only = True, data_only = True)
+    return mission_workbook.sheetnames
+
+
+def create_mission_from_sheet(path_to_mission_file,mission_sheet,mission_list):
+    mission_workbook = openpyxl.load_workbook(path_to_mission_file, read_only = True, data_only = True)
+
+    id_ = mission_workbook[mission_sheet]['B2']
+    name = mission_workbook[mission_sheet]['B3']
+    mission_type = mission_workbook[mission_sheet]['B4']
+    mission_range = mission_workbook[mission_sheet]['B5']
+    payload = mission_workbook[mission_sheet]['B6']
 
 
 class Mission():
@@ -25,13 +36,13 @@ class MissionSegment():
 
     def load_aircraft_data(self, aircraft_type):
         self.tsfc = aircraft_type.tsfc
-        if self.aero_setup == "dirty":
+        if self.aero_setup == 'dirty':
             self.lift2drag = aircraft_type.dirty_lift2drag
-        elif self.aero_setup == "clean":
+        elif self.aero_setup == 'clean':
             self.lift2drag = aircraft_type.clean_lift2drag
         else:
             self.lift2drag = aircraft_type.clean_lift2drag
-            print("Unknown aero_setup. Using clean_lift2drag for segment "+ self.id_ +"_" + self.name)
+            print('Unknown aero_setup. Using clean_lift2drag for segment '+ self.id_ +'_' + self.name)
     
     def payload_drop(self, payload):
         self.weight_delta = -payload
