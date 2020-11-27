@@ -2,3 +2,4 @@ US0001  Create folder structure
 US0002  Create mission segments and aircraft objects
 US0003  Improve folder structure
 US0004  Create scan_mission_file function
+US0005  Add segments to mission

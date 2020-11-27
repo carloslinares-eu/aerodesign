@@ -4,11 +4,11 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="airsign-carloslinares-eu",
+    name="airsign",
     version="0.0.1",
     author="Carlos Linares",
     author_email="contact@carloslinares.eu",
-    description="Aircraft Design package",
+    description="Aircraft Design Package",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/carloslinares-eu/airsign",
